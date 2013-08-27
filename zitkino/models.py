@@ -120,9 +120,10 @@ class Showtime(db.Document):
             return None
         
         #Start + length of movie + rerve (10 minutes)
-        departure_time = self.starts_at + timedelta(minutes=self.film.length+10)
+        starts_at_local = times.to_local(self.starts_at, 'Europe/Prague')
+        departure_time = starts_at_local + timedelta(minutes=self.film.length)
         to_home_at = ('http://jizdnirady.idnes.cz/brno/spojeni/'
-        + '?date=' + urllib.quote(self.starts_at.strftime("%-d.%-m.%Y").encode("utf-8"))
+        + '?date=' + urllib.quote(starts_at_local.strftime("%-d.%-m.%Y").encode("utf-8"))
         + '&time=' + urllib.quote(departure_time.strftime("%-H:%M"))
         + '&f=' + urllib.quote_plus((self.cinema.town + ", " + self.cinema.street).encode("utf-8")))
         return to_home_at
