@@ -9,6 +9,7 @@ import times
 
 from . import db
 from .utils import slugify
+import urllib
 
 
 class Cinema(db.Document):
@@ -112,6 +113,19 @@ class Showtime(db.Document):
     @property
     def film(self):
         return self.film_paired or self.film_scraped
+
+    @property
+    def home_connection(self):
+        if self.film.length == None or self.starts_at == None:
+            return None
+        
+        #Start + length of movie + rerve (10 minutes)
+        departure_time = self.starts_at + timedelta(minutes=self.film.length+10)
+        to_home_at = ('http://jizdnirady.idnes.cz/brno/spojeni/'
+        + '?date=' + urllib.quote(self.starts_at.strftime("%-d.%-m.%Y").encode("utf-8"))
+        + '&time=' + urllib.quote(departure_time.strftime("%-H:%M"))
+        + '&f=' + urllib.quote_plus((self.cinema.town + ", " + self.cinema.street).encode("utf-8")))
+        return to_home_at
 
     @db.queryset_manager
     def upcoming(cls, queryset):

@@ -2,11 +2,12 @@
 
 
 from zitkino import parsers
+from zitkino import mc
 from zitkino.utils import download
 from zitkino.models import Cinema, Showtime, ScrapedFilm
 
 from . import scrapers
-
+import re
 
 cinema = Cinema(
     name=u'Kino Art',
@@ -21,6 +22,7 @@ cinema = Cinema(
 class Scraper(object):
 
     url = 'http://www.kultura-brno.cz/cs/film/program-kina-art'
+    base_programme_url = 'http://www.kultura-brno.cz'
     title_blacklist = [u'Kinové prázdniny']
     default_price = 110
     price_map = (
@@ -83,6 +85,9 @@ class Scraper(object):
         title_el = elements.get('title')
         if title_el is None:
             return None
+        
+        length = self._scrape_detail_page(title_el.get("href"))
+
         title_main = title_el.text_content()
         if title_main in self.title_blacklist:
             return None
@@ -107,9 +112,28 @@ class Scraper(object):
             film_scraped=ScrapedFilm(
                 title_main=title_main,
                 titles=[title_main],
+                length = length
             ),
             starts_at=starts_at,
             tags=tags,
             url_booking=url_booking,
             price=price,
         )
+
+    def _scrape_detail_page(self, url):
+        info = mc.get(str(self.base_programme_url + url))
+        if info is None:
+            resp = download(self.base_programme_url + url)
+            if resp.status_code != 200:
+                return None
+            html = parsers.html(resp.content, resp.url)
+            info = ''.join(map((lambda x: x.text_content().encode('utf-8')),
+                html.cssselect('.content h3')))
+            mc.set(str(self.base_programme_url + url), info)
+
+        length = re.findall(r"Délka:\s*(\d*)", info, re.U)
+        
+        if len(length) != 1:
+            return None
+        
+        return int(length[0])

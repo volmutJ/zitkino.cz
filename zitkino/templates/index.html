@@ -19,6 +19,13 @@
                         <a href="{{ cinema.url }}">{{ cinema.name }}</a>
                     {% endfor %}
                 </td>
+                <td style="visibility:hidden">
+                    {% for to_home_at in showtimes_per_film.list|map(attribute='home_connection')|sort(attribute='starts_at') %}
+                        {% if to_home_at %}
+                            <a href="{{ to_home_at }}">Spojení domů</a>
+                        {% endif %}
+                    {% endfor %}
+                </td>
             </tr>
             {% endfor %}
         </table>

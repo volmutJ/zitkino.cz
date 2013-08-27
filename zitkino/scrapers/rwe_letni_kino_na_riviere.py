@@ -2,15 +2,17 @@
 
 
 from zitkino import parsers
+from zitkino import mc
 from zitkino.utils import download
 from zitkino.models import Cinema, Showtime, ScrapedFilm
 
 from . import scrapers
+import re
 
 
 cinema = Cinema(
     name=u'RWE letní kino na Riviéře',
-    url='http://www.kinonariviere.cz/',
+    url='http://www.kinonariviere.cz',
     street=u'Bauerova 322/7',
     town=u'Brno',
     coords=(49.18827, 16.56924)
@@ -42,6 +44,9 @@ class Scraper(object):
         )
 
         title_main = row[3].text_content()
+        link_detail = row[3].cssselect("a")[0]
+        length = self._scrape_detail_page(url = link_detail.get("href"))
+        
         title_orig = row[4].text_content()
 
         tags = [self.tags_map.get(t) for t
@@ -55,9 +60,25 @@ class Scraper(object):
             film_scraped=ScrapedFilm(
                 title_main=title_main,
                 titles=[title_main, title_orig],
+                length = length
             ),
             starts_at=starts_at,
             tags=tags,
             url_booking=url_booking,
             price=price,
         )
+
+    def _scrape_detail_page(self, url):
+        length_item = mc.get(str(cinema.url + url))
+        if length_item is None:
+            resp = download(cinema.url + url)
+            html = parsers.html(resp.content, base_url=resp.url)
+            length_item = html.cssselect("#main .group-right .field-name-field-delka-film")
+            if len(length_item) != 1:
+                return None
+            else:
+                length_item = length_item[0].text_content()
+                mc.set(str(cinema.url + url), length_item)
+        length = re.findall(r'(\d*)', length_item)[0]
+        
+        return int(length)
